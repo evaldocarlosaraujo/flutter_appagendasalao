@@ -116,10 +116,9 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 value: _tipoUsuario,
                 items: [
                   DropdownMenuItem(value: 'cliente', child: Text('Cliente')),
-                  DropdownMenuItem(
-                    value: 'administrador',
-                    child: Text('Administrador'),
-                  ),
+                  //                 DropdownMenuItem(
+                  //                   value: 'administrador',
+                  //                   child: Text('Administrador')),
                 ],
                 onChanged: (value) {
                   setState(() {
