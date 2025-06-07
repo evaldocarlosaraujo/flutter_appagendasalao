@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_null_comparison
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -54,7 +56,7 @@ class MeusAgendamentosScreen extends StatelessWidget {
                         : 'Data inválida',
                   ),
                   trailing: IconButton(
-                    icon: Icon(Icons.cancel, color: Colors.red),
+                    icon: Icon(Icons.cancel, color: Colors.orange),
                     onPressed: () => cancelarAgendamento(doc.id, context),
                   ),
                 ),
