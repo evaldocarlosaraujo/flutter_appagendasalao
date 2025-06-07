@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_appagendasalao/views/admin_resgates_screen.dart';
 import 'package:flutter_appagendasalao/views/listar_profissionais_screen.dart';
 import 'package:flutter_appagendasalao/views/listar_servicos_screen.dart';
 import 'package:flutter_appagendasalao/views/login_screen.dart';
@@ -90,6 +91,16 @@ class HomeAdmin extends StatelessWidget {
                 );
               },
               child: Text('Agenda Geral'),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => AdminResgatesScreen()),
+                );
+              },
+              child: Text('Resgates de Brindes'),
             ),
             SizedBox(height: 10),
           ],

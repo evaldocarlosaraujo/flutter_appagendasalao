@@ -37,6 +37,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
               'nome': _nomeController.text.trim(),
               'email': _emailController.text.trim(),
               'tipo': _tipoUsuario,
+              "pontos": 0,
+              "resgatouBrinde": false,
             });
 
         // Redirecionamento baseado no tipo

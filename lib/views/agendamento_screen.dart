@@ -3,6 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
+// Classe com constantes para o status
+class StatusAgendamento {
+  static const String pendente = 'pendente';
+  static const String confirmado = 'confirmado';
+  static const String cancelado = 'cancelado';
+}
+
 class AgendamentoScreen extends StatefulWidget {
   @override
   State<AgendamentoScreen> createState() => _AgendamentoScreenState();
@@ -40,12 +47,13 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
 
     await FirebaseFirestore.instance.collection('agendamentos').doc(id).set({
       'id': id,
-      'usuarioId': usuarioId,
+      'clienteId': usuarioId,
       'profissionalId': profissionalSelecionadoId,
       'profissionalNome': profissionalNome,
       'servicoId': servicoSelecionadoId,
       'servicoNome': servicoNome,
       'dataHora': dataHora.toIso8601String(),
+      'status': StatusAgendamento.pendente,
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -63,7 +71,6 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
-            // Lista de Serviços
             Text('Serviço:', style: TextStyle(fontWeight: FontWeight.bold)),
             StreamBuilder<QuerySnapshot>(
               stream:
@@ -95,7 +102,6 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
             ),
             SizedBox(height: 20),
 
-            // Lista de Profissionais
             Text(
               'Profissional:',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -132,7 +138,6 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
             ),
             SizedBox(height: 20),
 
-            // Selecionar Data
             Text('Data:', style: TextStyle(fontWeight: FontWeight.bold)),
             ElevatedButton(
               onPressed: () async {
@@ -152,7 +157,6 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
             ),
             SizedBox(height: 20),
 
-            // Selecionar Horário
             Text('Horário:', style: TextStyle(fontWeight: FontWeight.bold)),
             ElevatedButton(
               onPressed: () async {

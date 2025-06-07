@@ -10,21 +10,67 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
   String? profissionalSelecionadoId;
   DateTime? dataSelecionada;
 
-  void cancelarAgendamento(String agendamentoId, BuildContext context) {
-    FirebaseFirestore.instance
+  void cancelarAgendamento(String agendamentoId, BuildContext context) async {
+    final agendamentoRef = FirebaseFirestore.instance
         .collection('agendamentos')
-        .doc(agendamentoId)
-        .delete();
+        .doc(agendamentoId);
+
+    final agendamentoSnapshot = await agendamentoRef.get();
+
+    if (agendamentoSnapshot.exists) {
+      final agendamentoData = agendamentoSnapshot.data()!;
+      final status = agendamentoData['status'];
+      final clienteId = agendamentoData['clienteId'];
+
+      // Se estava confirmado, desconta ponto
+      if (status == 'confirmado' && clienteId != null) {
+        final usuarioRef = FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(clienteId);
+        await usuarioRef.update({'pontos': FieldValue.increment(-1)});
+      }
+
+      // Agora deleta o agendamento
+      await agendamentoRef.delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Agendamento cancelado com sucesso')),
+      );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Agendamento não encontrado.')));
+    }
+  }
+
+  void confirmarAgendamento(
+    String agendamentoId,
+    String clienteId,
+    BuildContext context,
+  ) async {
+    final agendamentoRef = FirebaseFirestore.instance
+        .collection('agendamentos')
+        .doc(agendamentoId);
+    final usuarioRef = FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(clienteId);
+
+    // Atualiza o status do agendamento
+    await agendamentoRef.update({'status': 'confirmado'});
+
+    // Incrementa os pontos do cliente
+    await usuarioRef.update({'pontos': FieldValue.increment(1)});
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Agendamento cancelado com sucesso')),
+      SnackBar(
+        content: Text('Agendamento confirmado e ponto adicionado ao cliente!'),
+      ),
     );
   }
 
   Stream<QuerySnapshot> _agendamentosFiltrados() {
     final ref = FirebaseFirestore.instance.collection('agendamentos');
-
-    Query query = ref; //.orderBy('dataHora');
+    Query query = ref;
 
     if (profissionalSelecionadoId != null) {
       query = query.where(
@@ -114,11 +160,12 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                     ),
                     IconButton(
                       icon: Icon(Icons.clear),
-                      onPressed:
-                          () => setState(() {
-                            dataSelecionada = null;
-                            profissionalSelecionadoId = null;
-                          }),
+                      onPressed: () {
+                        setState(() {
+                          dataSelecionada = null;
+                          profissionalSelecionadoId = null;
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -145,6 +192,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                   itemBuilder: (context, index) {
                     final doc = agendamentos[index];
                     final dataHora = DateTime.tryParse(doc['dataHora']);
+                    final status = doc['status'] ?? 'pendente';
 
                     return Card(
                       margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -157,9 +205,30 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                               ? '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}'
                               : 'Data inválida',
                         ),
-                        trailing: IconButton(
-                          icon: Icon(Icons.cancel, color: Colors.red),
-                          onPressed: () => cancelarAgendamento(doc.id, context),
+                        trailing: Wrap(
+                          spacing: 8,
+                          children: [
+                            if (status == 'pendente')
+                              IconButton(
+                                icon: Icon(
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                ),
+                                tooltip: 'Confirmar Agendamento',
+                                onPressed:
+                                    () => confirmarAgendamento(
+                                      doc.id,
+                                      doc['clienteId'],
+                                      context,
+                                    ),
+                              ),
+                            IconButton(
+                              icon: Icon(Icons.cancel, color: Colors.red),
+                              tooltip: 'Cancelar Agendamento',
+                              onPressed:
+                                  () => cancelarAgendamento(doc.id, context),
+                            ),
+                          ],
                         ),
                       ),
                     );

@@ -25,7 +25,7 @@ class MeusAgendamentosScreen extends StatelessWidget {
         stream:
             FirebaseFirestore.instance
                 .collection('agendamentos')
-                .where('usuarioId', isEqualTo: userId)
+                .where('clienteId', isEqualTo: userId)
                 //.orderBy('dataHora')
                 .snapshots(),
         builder: (context, snapshot) {

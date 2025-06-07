@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_appagendasalao/views/programa_fidelidade_screen.dart';
 import 'consulta_servicos_screen.dart';
 import 'agendamento_screen.dart';
 import 'login_screen.dart';
@@ -80,6 +81,18 @@ class HomeCliente extends StatelessWidget {
                   MaterialPageRoute(builder: (_) => MeusAgendamentosScreen()),
                 );
               },
+              style: _botaoEstilo(),
+            ),
+            SizedBox(height: 16),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ProgramaFidelidadeScreen()),
+                );
+              },
+              child: Text('Programa de Fidelidade'),
               style: _botaoEstilo(),
             ),
           ],
