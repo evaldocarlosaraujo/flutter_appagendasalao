@@ -11,6 +11,8 @@ class ProgramaFidelidadeScreen extends StatefulWidget {
 class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
   int pontos = 0;
   bool podeResgatar = false;
+  String? brindeSelecionadoId;
+  List<Map<String, dynamic>> brindesDisponiveis = [];
   String? brindeAprovado;
   final user = FirebaseAuth.instance.currentUser;
 
@@ -18,6 +20,7 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
   void initState() {
     super.initState();
     carregarPontos();
+    carregarBrindesDisponiveis();
     buscarBrindeAprovado();
   }
 
@@ -27,7 +30,6 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
             .collection('usuarios')
             .doc(user!.uid)
             .get();
-
     final data = doc.data();
     if (data != null) {
       setState(() {
@@ -35,6 +37,23 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
         podeResgatar = pontos >= 10;
       });
     }
+  }
+
+  Future<void> carregarBrindesDisponiveis() async {
+    final snapshot =
+        await FirebaseFirestore.instance.collection('brindes').get();
+    setState(() {
+      brindesDisponiveis =
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              'nome': data['nome'] ?? 'Sem nome',
+              'descricao': data['descricao'] ?? '',
+              'pontosNecessarios': data['pontosNecessarios'] ?? 10,
+            };
+          }).toList();
+    });
   }
 
   Future<void> buscarBrindeAprovado() async {
@@ -50,7 +69,7 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
     if (resgatesSnapshot.docs.isNotEmpty) {
       final resgate = resgatesSnapshot.docs.first;
 
-      if (resgate.data().toString().contains('brindeId')) {
+      if (resgate.data().containsKey('brindeId')) {
         final brindeId = resgate['brindeId'];
         final brindeDoc =
             await FirebaseFirestore.instance
@@ -68,16 +87,16 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
   }
 
   Future<void> resgatarBrinde() async {
-    if (!podeResgatar) return;
+    if (!podeResgatar || brindeSelecionadoId == null) return;
 
-    // Registra o resgate em uma nova coleção
     await FirebaseFirestore.instance.collection('resgates').add({
       'clienteId': user!.uid,
+      'brindeId': brindeSelecionadoId,
       'data': Timestamp.now(),
+      'dataSolicitacao': DateTime.now().toIso8601String(),
       'status': 'pendente',
     });
 
-    // Zera os pontos
     await FirebaseFirestore.instance
         .collection('usuarios')
         .doc(user!.uid)
@@ -92,7 +111,7 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
     setState(() {
       pontos = 0;
       podeResgatar = false;
-      brindeAprovado = null;
+      brindeSelecionadoId = null;
     });
   }
 
@@ -102,31 +121,50 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
       appBar: AppBar(title: Text('Programa de Fidelidade')),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
           children: [
             Text('Seus pontos: $pontos', style: TextStyle(fontSize: 22)),
+            SizedBox(height: 20),
+            if (brindesDisponiveis.isNotEmpty)
+              DropdownButtonFormField<String>(
+                value: brindeSelecionadoId,
+                hint: Text('Selecione um brinde'),
+                onChanged:
+                    podeResgatar
+                        ? (String? value) {
+                          setState(() {
+                            brindeSelecionadoId = value;
+                          });
+                        }
+                        : null,
+                items:
+                    brindesDisponiveis.map((brinde) {
+                      return DropdownMenuItem<String>(
+                        value: brinde['id'],
+                        child: Text(
+                          '${brinde['nome']} - ${brinde['pontosNecessarios']} pts',
+                        ),
+                      );
+                    }).toList(),
+              ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: podeResgatar ? resgatarBrinde : null,
               child: Text('Resgatar Brinde'),
             ),
             SizedBox(height: 40),
+            if (brindeAprovado != null)
+              Text(
+                '🎁 Você tem um brinde aprovado: $brindeAprovado',
+                style: TextStyle(fontSize: 16, color: Colors.green),
+                textAlign: TextAlign.center,
+              ),
+            SizedBox(height: 20),
             Text(
               'A cada 10 agendamentos confirmados você ganha um brinde!',
               style: TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 30),
-            if (brindeAprovado != null)
-              Card(
-                color: Colors.green[50],
-                child: ListTile(
-                  title: Text('Brinde Aprovado:'),
-                  subtitle: Text(brindeAprovado!),
-                  leading: Icon(Icons.card_giftcard, color: Colors.green),
-                ),
-              ),
           ],
         ),
       ),

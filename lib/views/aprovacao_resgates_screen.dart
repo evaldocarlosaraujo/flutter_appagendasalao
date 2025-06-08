@@ -8,7 +8,7 @@ class AprovacaoResgatesScreen extends StatelessWidget {
         .doc(resgateId)
         .update({'status': 'aprovado'});
 
-    // (Opcional) Reduzir os pontos do cliente após a aprovação
+    // Reduzir os pontos do cliente após a aprovação
     final userDoc =
         await FirebaseFirestore.instance
             .collection('usuarios')
@@ -17,7 +17,7 @@ class AprovacaoResgatesScreen extends StatelessWidget {
 
     final pontosAtuais = userDoc.data()?['pontos'] ?? 0;
 
-    // Suponha que os pontos necessários foram salvos na requisição de resgate
+    // Supondo que os pontos necessários foram salvos na requisição de resgate
     final resgateDoc =
         await FirebaseFirestore.instance
             .collection('resgates')
