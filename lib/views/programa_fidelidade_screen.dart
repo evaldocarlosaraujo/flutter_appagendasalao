@@ -11,12 +11,14 @@ class ProgramaFidelidadeScreen extends StatefulWidget {
 class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
   int pontos = 0;
   bool podeResgatar = false;
+  String? brindeAprovado;
   final user = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {
     super.initState();
     carregarPontos();
+    buscarBrindeAprovado();
   }
 
   Future<void> carregarPontos() async {
@@ -32,6 +34,36 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
         pontos = data['pontos'] ?? 0;
         podeResgatar = pontos >= 10;
       });
+    }
+  }
+
+  Future<void> buscarBrindeAprovado() async {
+    final resgatesSnapshot =
+        await FirebaseFirestore.instance
+            .collection('resgates')
+            .where('clienteId', isEqualTo: user!.uid)
+            .where('status', isEqualTo: 'aprovado')
+            .orderBy('data', descending: true)
+            .limit(1)
+            .get();
+
+    if (resgatesSnapshot.docs.isNotEmpty) {
+      final resgate = resgatesSnapshot.docs.first;
+
+      if (resgate.data().toString().contains('brindeId')) {
+        final brindeId = resgate['brindeId'];
+        final brindeDoc =
+            await FirebaseFirestore.instance
+                .collection('brindes')
+                .doc(brindeId)
+                .get();
+
+        if (brindeDoc.exists) {
+          setState(() {
+            brindeAprovado = brindeDoc['nome'];
+          });
+        }
+      }
     }
   }
 
@@ -60,6 +92,7 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
     setState(() {
       pontos = 0;
       podeResgatar = false;
+      brindeAprovado = null;
     });
   }
 
@@ -70,6 +103,7 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Seus pontos: $pontos', style: TextStyle(fontSize: 22)),
             SizedBox(height: 20),
@@ -83,6 +117,16 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
               style: TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),
+            SizedBox(height: 30),
+            if (brindeAprovado != null)
+              Card(
+                color: Colors.green[50],
+                child: ListTile(
+                  title: Text('Brinde Aprovado:'),
+                  subtitle: Text(brindeAprovado!),
+                  leading: Icon(Icons.card_giftcard, color: Colors.green),
+                ),
+              ),
           ],
         ),
       ),

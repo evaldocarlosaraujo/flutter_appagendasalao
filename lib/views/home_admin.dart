@@ -1,11 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_appagendasalao/views/admin_resgates_screen.dart';
+import 'package:flutter_appagendasalao/views/listar_brindes_screen.dart';
 import 'package:flutter_appagendasalao/views/listar_profissionais_screen.dart';
 import 'package:flutter_appagendasalao/views/listar_servicos_screen.dart';
 import 'package:flutter_appagendasalao/views/login_screen.dart';
+import 'package:flutter_appagendasalao/views/resgates_admin_screen.dart';
 import 'cadastro_profissional_screen.dart';
 import 'cadastro_servico_screen.dart';
+import 'cadastro_brinde_screen.dart'; // <-- importado aqui
 import 'agenda_geral_screen.dart';
 
 class HomeAdmin extends StatelessWidget {
@@ -33,10 +35,15 @@ class HomeAdmin extends StatelessWidget {
         ],
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          shrinkWrap: true,
           children: [
-            Text('Bem-vindo, você está como Admin!'),
+            Text(
+              'Bem-vindo, você está como Admin!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 20),
 
             ElevatedButton(
@@ -51,6 +58,7 @@ class HomeAdmin extends StatelessWidget {
               child: Text('Cadastrar Profissional'),
             ),
             SizedBox(height: 10),
+
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -63,6 +71,7 @@ class HomeAdmin extends StatelessWidget {
               child: Text('Gerenciar Profissionais'),
             ),
             SizedBox(height: 10),
+
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -73,6 +82,7 @@ class HomeAdmin extends StatelessWidget {
               child: Text('Cadastrar Serviço'),
             ),
             SizedBox(height: 10),
+
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -83,6 +93,7 @@ class HomeAdmin extends StatelessWidget {
               child: Text('Gerenciar Serviços'),
             ),
             SizedBox(height: 10),
+
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -93,16 +104,36 @@ class HomeAdmin extends StatelessWidget {
               child: Text('Agenda Geral'),
             ),
             SizedBox(height: 10),
+
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => AdminResgatesScreen()),
+                  MaterialPageRoute(builder: (_) => CadastroBrindeScreen()),
+                );
+              },
+              child: Text('Cadastrar Brinde'),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ListarBrindesScreen()),
+                );
+              },
+              child: Text('Gerenciar Brindes'),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ResgatesAdminScreen()),
                 );
               },
               child: Text('Resgates de Brindes'),
             ),
-            SizedBox(height: 10),
           ],
         ),
       ),
