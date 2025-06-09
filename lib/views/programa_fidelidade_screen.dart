@@ -14,6 +14,8 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
   String? brindeSelecionadoId;
   List<Map<String, dynamic>> brindesDisponiveis = [];
   String? brindeAprovado;
+  bool brindeUtilizado = false;
+
   final user = FirebaseAuth.instance.currentUser;
 
   @override
@@ -64,7 +66,7 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
             .collection('resgates')
             .where('clienteId', isEqualTo: user!.uid)
             .where('status', isEqualTo: 'aprovado')
-            //.orderBy('data', descending: true)
+            //.orderBy('data', descending: true) // Não usar pois causa erro se não houver índice
             .limit(1)
             .get();
 
@@ -78,6 +80,10 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
 
       final brindeId =
           resgate.data().containsKey('brindeId') ? resgate['brindeId'] : null;
+      final utilizado =
+          resgate.data().containsKey('utilizado')
+              ? resgate['utilizado'] == true
+              : false;
 
       if (brindeId != null) {
         debugPrint('🔑 brindeId encontrado: $brindeId');
@@ -97,6 +103,7 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
               brindeDoc.exists
                   ? brindeDoc['nome']
                   : 'Brinde removido ou não encontrado';
+          brindeUtilizado = utilizado;
         });
       } else {
         debugPrint('⚠️ brindeId não encontrado no resgate');
@@ -178,8 +185,13 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
             SizedBox(height: 40),
             if (brindeAprovado != null)
               Text(
-                '🎁 Você tem um brinde aprovado: $brindeAprovado',
-                style: TextStyle(fontSize: 16, color: Colors.green),
+                brindeUtilizado
+                    ? '✅ Brinde já utilizado: $brindeAprovado'
+                    : '🎁 Você tem um brinde aprovado: $brindeAprovado',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: brindeUtilizado ? Colors.grey : Colors.green,
+                ),
                 textAlign: TextAlign.center,
               ),
             SizedBox(height: 20),

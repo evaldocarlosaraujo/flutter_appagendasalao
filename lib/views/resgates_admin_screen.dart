@@ -12,12 +12,20 @@ class ResgatesAdminScreen extends StatelessWidget {
   void atualizarStatus(
     String resgateId,
     String novoStatus,
-    BuildContext context,
-  ) async {
-    await resgatesRef.doc(resgateId).update({'status': novoStatus});
+    BuildContext context, {
+    Map<String, dynamic> extras = const {},
+  }) async {
+    await resgatesRef.doc(resgateId).update({'status': novoStatus, ...extras});
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text('Resgate $novoStatus com sucesso.')));
+  }
+
+  void marcarComoUtilizado(String resgateId, BuildContext context) async {
+    await resgatesRef.doc(resgateId).update({'utilizado': true});
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Brinde marcado como utilizado.')));
   }
 
   Future<String> _buscarNomeBrinde(String brindeId) async {
@@ -47,6 +55,9 @@ class ResgatesAdminScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final resgate = resgates[index];
               final status = resgate['status'];
+              final utilizado =
+                  resgate.data().toString().contains('utilizado') &&
+                  resgate['utilizado'] == true;
               final Timestamp? timestamp = resgate['data'];
               final DateTime? data = timestamp?.toDate();
 
@@ -72,7 +83,7 @@ class ResgatesAdminScreen extends StatelessWidget {
                     child: ListTile(
                       title: Text(brindeSnapshot.data!),
                       subtitle: Text(
-                        'Solicitado em: $dataFormatada\nStatus: $status',
+                        'Solicitado em: $dataFormatada\nStatus: $status${utilizado ? '\n✅ Já utilizado' : ''}',
                       ),
                       isThreeLine: true,
                       trailing:
@@ -105,15 +116,25 @@ class ResgatesAdminScreen extends StatelessWidget {
                                   ),
                                 ],
                               )
-                              : Icon(
-                                status == 'aprovado'
-                                    ? Icons.verified
-                                    : Icons.block,
-                                color:
-                                    status == 'aprovado'
-                                        ? Colors.green
-                                        : Colors.red,
-                              ),
+                              : status == 'aprovado'
+                              ? Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.verified, color: Colors.green),
+                                  SizedBox(width: 8),
+                                  if (!utilizado)
+                                    TextButton.icon(
+                                      icon: Icon(Icons.check_circle_outline),
+                                      label: Text('Utilizado'),
+                                      onPressed:
+                                          () => marcarComoUtilizado(
+                                            resgate.id,
+                                            context,
+                                          ),
+                                    ),
+                                ],
+                              )
+                              : Icon(Icons.block, color: Colors.red),
                     ),
                   );
                 },
