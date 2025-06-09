@@ -57,32 +57,55 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
   }
 
   Future<void> buscarBrindeAprovado() async {
+    debugPrint('🔍 Buscando resgates aprovados...');
+
     final resgatesSnapshot =
         await FirebaseFirestore.instance
             .collection('resgates')
             .where('clienteId', isEqualTo: user!.uid)
             .where('status', isEqualTo: 'aprovado')
-            .orderBy('data', descending: true)
+            //.orderBy('data', descending: true)
             .limit(1)
             .get();
 
+    debugPrint(
+      '📦 Total de resgates aprovados encontrados: ${resgatesSnapshot.docs.length}',
+    );
+
     if (resgatesSnapshot.docs.isNotEmpty) {
       final resgate = resgatesSnapshot.docs.first;
+      debugPrint('📄 Dados do resgate: ${resgate.data()}');
 
-      if (resgate.data().containsKey('brindeId')) {
-        final brindeId = resgate['brindeId'];
+      final brindeId =
+          resgate.data().containsKey('brindeId') ? resgate['brindeId'] : null;
+
+      if (brindeId != null) {
+        debugPrint('🔑 brindeId encontrado: $brindeId');
+
         final brindeDoc =
             await FirebaseFirestore.instance
                 .collection('brindes')
                 .doc(brindeId)
                 .get();
 
-        if (brindeDoc.exists) {
-          setState(() {
-            brindeAprovado = brindeDoc['nome'];
-          });
-        }
+        debugPrint(
+          '📘 Documento do brinde: ${brindeDoc.exists ? brindeDoc.data() : 'não encontrado'}',
+        );
+
+        setState(() {
+          brindeAprovado =
+              brindeDoc.exists
+                  ? brindeDoc['nome']
+                  : 'Brinde removido ou não encontrado';
+        });
+      } else {
+        debugPrint('⚠️ brindeId não encontrado no resgate');
+        setState(() {
+          brindeAprovado = 'Brinde não especificado';
+        });
       }
+    } else {
+      debugPrint('❌ Nenhum resgate aprovado encontrado');
     }
   }
 
