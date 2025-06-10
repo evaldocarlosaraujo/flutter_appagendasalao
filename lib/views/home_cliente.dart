@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_appagendasalao/views/historico_resgates_screen.dart';
 import 'package:flutter_appagendasalao/views/programa_fidelidade_screen.dart';
 import 'consulta_servicos_screen.dart';
 import 'agendamento_screen.dart';
@@ -13,6 +14,15 @@ class HomeCliente extends StatelessWidget {
       context,
       MaterialPageRoute(builder: (_) => LoginScreen()),
       (route) => false,
+    );
+  }
+
+  ButtonStyle _botaoEstilo() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: Colors.amber[700],
+      foregroundColor: Colors.white,
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 
@@ -30,21 +40,21 @@ class HomeCliente extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      body: Center(
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          shrinkWrap: true,
           children: [
             Text(
               'Bem-vindo ao App AgendaSalão!',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.amber[800],
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 30),
+            SizedBox(height: 20),
 
             ElevatedButton.icon(
               icon: Icon(Icons.design_services),
@@ -57,7 +67,7 @@ class HomeCliente extends StatelessWidget {
               },
               style: _botaoEstilo(),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 10),
 
             ElevatedButton.icon(
               icon: Icon(Icons.calendar_month),
@@ -70,7 +80,7 @@ class HomeCliente extends StatelessWidget {
               },
               style: _botaoEstilo(),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 10),
 
             ElevatedButton.icon(
               icon: Icon(Icons.event_note),
@@ -83,7 +93,7 @@ class HomeCliente extends StatelessWidget {
               },
               style: _botaoEstilo(),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 10),
 
             ElevatedButton(
               onPressed: () {
@@ -95,18 +105,23 @@ class HomeCliente extends StatelessWidget {
               child: Text('Programa de Fidelidade'),
               style: _botaoEstilo(),
             ),
+            SizedBox(height: 10),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HistoricoResgatesScreen(),
+                  ),
+                );
+              },
+              child: Text('Ver Histórico de Resgates'),
+              style: _botaoEstilo(),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  ButtonStyle _botaoEstilo() {
-    return ElevatedButton.styleFrom(
-      backgroundColor: Colors.amber[700],
-      foregroundColor: Colors.white,
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 }
