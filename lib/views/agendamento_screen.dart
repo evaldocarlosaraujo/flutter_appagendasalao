@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
-// Classe com constantes para o status
 class StatusAgendamento {
   static const String pendente = 'pendente';
   static const String confirmado = 'confirmado';
@@ -41,6 +40,39 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
       horarioSelecionado!.hour,
       horarioSelecionado!.minute,
     );
+
+    // ❌ Validação: não permitir horários passados
+    if (dataHora.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Não é possível agendar com data ou horário já passados.",
+          ),
+          backgroundColor: Colors.red[400],
+        ),
+      );
+      return;
+    }
+
+    // ❌ Verifica se já existe agendamento para o mesmo profissional, dia e hora
+    final existe =
+        await FirebaseFirestore.instance
+            .collection('agendamentos')
+            .where('dataHora', isEqualTo: dataHora.toIso8601String())
+            .where('profissionalId', isEqualTo: profissionalSelecionadoId)
+            .get();
+
+    if (existe.docs.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Já existe um agendamento neste horário para este profissional.",
+          ),
+          backgroundColor: Colors.red[400],
+        ),
+      );
+      return;
+    }
 
     final id = Uuid().v4();
     final usuarioId = FirebaseAuth.instance.currentUser!.uid;

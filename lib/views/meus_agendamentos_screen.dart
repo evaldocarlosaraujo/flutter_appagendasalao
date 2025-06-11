@@ -1,5 +1,3 @@
-// ignore_for_file: unnecessary_null_comparison
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +10,18 @@ class MeusAgendamentosScreen extends StatelessWidget {
         .collection('agendamentos')
         .doc(agendamentoId)
         .delete();
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Agendamento cancelado com sucesso')),
+    );
+  }
+
+  void mostrarMensagemConfirmado(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Agendamento confirmado não pode ser cancelado.'),
+        backgroundColor: Colors.red[400],
+      ),
     );
   }
 
@@ -42,22 +50,43 @@ class MeusAgendamentosScreen extends StatelessWidget {
             itemCount: agendamentos.length,
             itemBuilder: (context, index) {
               final doc = agendamentos[index];
-              final dataHora = DateTime.parse(doc['dataHora']);
+              final data = doc.data() as Map<String, dynamic>;
+
+              final dataHora = DateTime.parse(data['dataHora']);
+              final status = data['status']?.toLowerCase() ?? 'pendente';
+              final confirmado = status == 'confirmado';
 
               return Card(
                 margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: ListTile(
                   title: Text(
-                    '${doc['servicoNome']} com: ${doc['profissionalNome']}',
+                    '${data['servicoNome']} com: ${data['profissionalNome']}',
                   ),
-                  subtitle: Text(
-                    dataHora != null
-                        ? '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}'
-                        : 'Data inválida',
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}',
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Status: ${status[0].toUpperCase()}${status.substring(1)}',
+                        style: TextStyle(
+                          color: confirmado ? Colors.green : Colors.grey[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                   trailing: IconButton(
                     icon: Icon(Icons.cancel, color: Colors.orange),
-                    onPressed: () => cancelarAgendamento(doc.id, context),
+                    onPressed: () {
+                      if (confirmado) {
+                        mostrarMensagemConfirmado(context);
+                      } else {
+                        cancelarAgendamento(doc.id, context);
+                      }
+                    },
                   ),
                 ),
               );
