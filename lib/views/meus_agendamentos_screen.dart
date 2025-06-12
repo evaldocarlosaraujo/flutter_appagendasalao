@@ -72,7 +72,7 @@ class MeusAgendamentosScreen extends StatelessWidget {
                       Text(
                         'Status: ${status[0].toUpperCase()}${status.substring(1)}',
                         style: TextStyle(
-                          color: confirmado ? Colors.green : Colors.grey[700],
+                          color: confirmado ? Colors.green : Colors.orange,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

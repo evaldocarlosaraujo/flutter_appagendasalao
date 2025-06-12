@@ -11,6 +11,27 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
   DateTime? dataSelecionada;
 
   void cancelarAgendamento(String agendamentoId, BuildContext context) async {
+    final confirmacao = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Confirmar cancelamento'),
+            content: Text('Deseja realmente cancelar o agendamento?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: Text('Não'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: Text('Sim'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmacao != true) return;
+
     final agendamentoRef = FirebaseFirestore.instance
         .collection('agendamentos')
         .doc(agendamentoId);
@@ -22,7 +43,6 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
       final status = agendamentoData['status'];
       final clienteId = agendamentoData['clienteId'];
 
-      // Se estava confirmado, desconta ponto
       if (status == 'confirmado' && clienteId != null) {
         final usuarioRef = FirebaseFirestore.instance
             .collection('usuarios')
@@ -30,7 +50,6 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
         await usuarioRef.update({'pontos': FieldValue.increment(-1)});
       }
 
-      // Agora deleta o agendamento
       await agendamentoRef.delete();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -55,16 +74,11 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
         .collection('usuarios')
         .doc(clienteId);
 
-    // Atualiza o status do agendamento
     await agendamentoRef.update({'status': 'confirmado'});
-
-    // Incrementa os pontos do cliente
     await usuarioRef.update({'pontos': FieldValue.increment(1)});
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Agendamento confirmado e ponto adicionado ao cliente!'),
-      ),
+      SnackBar(content: Text('Agendamento confirmado e ponto adicionado.')),
     );
   }
 
@@ -94,6 +108,20 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
     return query.snapshots();
   }
 
+  Future<String> _buscarNomeCliente(String clienteId) async {
+    final usuarioSnapshot =
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(clienteId)
+            .get();
+
+    if (usuarioSnapshot.exists) {
+      return usuarioSnapshot.data()?['nome'] ?? 'Cliente';
+    } else {
+      return 'Cliente';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -104,7 +132,6 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
-                // Filtro por profissional
                 StreamBuilder<QuerySnapshot>(
                   stream:
                       FirebaseFirestore.instance
@@ -132,8 +159,6 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                   },
                 ),
                 SizedBox(height: 10),
-
-                // Filtro por data
                 Row(
                   children: [
                     Expanded(
@@ -172,8 +197,6 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
               ],
             ),
           ),
-
-          // Lista de Agendamentos
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _agendamentosFiltrados(),
@@ -193,44 +216,55 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                     final doc = agendamentos[index];
                     final dataHora = DateTime.tryParse(doc['dataHora']);
                     final status = doc['status'] ?? 'pendente';
+                    final clienteId = doc['clienteId'];
 
-                    return Card(
-                      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: ListTile(
-                        title: Text(
-                          '${doc['servicoNome']} com: ${doc['profissionalNome']}',
-                        ),
-                        subtitle: Text(
-                          dataHora != null
-                              ? '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}'
-                              : 'Data inválida',
-                        ),
-                        trailing: Wrap(
-                          spacing: 8,
-                          children: [
-                            if (status == 'pendente')
-                              IconButton(
-                                icon: Icon(
-                                  Icons.check_circle,
-                                  color: Colors.green,
-                                ),
-                                tooltip: 'Confirmar Agendamento',
-                                onPressed:
-                                    () => confirmarAgendamento(
-                                      doc.id,
-                                      doc['clienteId'],
-                                      context,
-                                    ),
-                              ),
-                            IconButton(
-                              icon: Icon(Icons.cancel, color: Colors.red),
-                              tooltip: 'Cancelar Agendamento',
-                              onPressed:
-                                  () => cancelarAgendamento(doc.id, context),
+                    return FutureBuilder<String>(
+                      future: _buscarNomeCliente(clienteId),
+                      builder: (context, snapshotNome) {
+                        final nomeCliente = snapshotNome.data ?? 'Cliente';
+
+                        return Card(
+                          margin: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          child: ListTile(
+                            title: Text(
+                              '${doc['servicoNome']} com: ${doc['profissionalNome']}',
                             ),
-                          ],
-                        ),
-                      ),
+                            subtitle: Text(
+                              '${dataHora != null ? '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}' : 'Data inválida'}\nCliente: $nomeCliente',
+                            ),
+                            isThreeLine: true,
+                            trailing: Wrap(
+                              spacing: 8,
+                              children: [
+                                if (status == 'pendente')
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                    ),
+                                    tooltip: 'Confirmar Agendamento',
+                                    onPressed:
+                                        () => confirmarAgendamento(
+                                          doc.id,
+                                          clienteId,
+                                          context,
+                                        ),
+                                  ),
+                                IconButton(
+                                  icon: Icon(Icons.cancel, color: Colors.red),
+                                  tooltip: 'Cancelar Agendamento',
+                                  onPressed:
+                                      () =>
+                                          cancelarAgendamento(doc.id, context),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
