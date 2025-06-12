@@ -5,15 +5,39 @@ import 'package:flutter/material.dart';
 class MeusAgendamentosScreen extends StatelessWidget {
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
-  void cancelarAgendamento(String agendamentoId, BuildContext context) {
-    FirebaseFirestore.instance
-        .collection('agendamentos')
-        .doc(agendamentoId)
-        .delete();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Agendamento cancelado com sucesso')),
+  void cancelarAgendamentoComConfirmacao(
+    String agendamentoId,
+    BuildContext context,
+  ) async {
+    final confirmacao = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Cancelar Agendamento'),
+            content: Text('Deseja realmente cancelar este agendamento?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Não'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Sim'),
+              ),
+            ],
+          ),
     );
+
+    if (confirmacao == true) {
+      await FirebaseFirestore.instance
+          .collection('agendamentos')
+          .doc(agendamentoId)
+          .delete();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Agendamento cancelado com sucesso')),
+      );
+    }
   }
 
   void mostrarMensagemConfirmado(BuildContext context) {
@@ -84,7 +108,7 @@ class MeusAgendamentosScreen extends StatelessWidget {
                       if (confirmado) {
                         mostrarMensagemConfirmado(context);
                       } else {
-                        cancelarAgendamento(doc.id, context);
+                        cancelarAgendamentoComConfirmacao(doc.id, context);
                       }
                     },
                   ),
