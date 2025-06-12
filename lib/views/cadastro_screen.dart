@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_multi_formatter/flutter_multi_formatter.dart'; // <- import da máscara
 import 'home_cliente.dart';
 import 'home_admin.dart';
 
@@ -14,6 +15,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
   final _nomeController = TextEditingController();
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
+  final _telefoneController = TextEditingController(); // novo
   String _tipoUsuario = 'cliente'; // valor padrão
   bool _carregando = false;
 
@@ -22,26 +24,24 @@ class _CadastroScreenState extends State<CadastroScreen> {
       setState(() => _carregando = true);
 
       try {
-        // Criação do usuário
         UserCredential credenciais = await FirebaseAuth.instance
             .createUserWithEmailAndPassword(
               email: _emailController.text.trim(),
               password: _senhaController.text,
             );
 
-        // Salvando no Firestore
         await FirebaseFirestore.instance
             .collection('usuarios')
             .doc(credenciais.user!.uid)
             .set({
               'nome': _nomeController.text.trim(),
               'email': _emailController.text.trim(),
+              'telefone': _telefoneController.text.trim(), // novo
               'tipo': _tipoUsuario,
               "pontos": 0,
               "resgatouBrinde": false,
             });
 
-        // Redirecionamento baseado no tipo
         Widget destino =
             _tipoUsuario == 'administrador' ? HomeAdmin() : HomeCliente();
 
@@ -64,6 +64,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
     _nomeController.dispose();
     _emailController.dispose();
     _senhaController.dispose();
+    _telefoneController.dispose(); // novo
     super.dispose();
   }
 
@@ -103,6 +104,28 @@ class _CadastroScreenState extends State<CadastroScreen> {
               SizedBox(height: 16),
 
               TextFormField(
+                controller: _telefoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(labelText: 'Telefone (com DDD)'),
+                inputFormatters: [
+                  PhoneInputFormatter(
+                    defaultCountryCode: 'BR',
+                    allowEndlessPhone: false,
+                  ),
+                ],
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Digite seu telefone';
+                  }
+                  if (value.length < 14) {
+                    return 'Telefone incompleto';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16),
+
+              TextFormField(
                 controller: _senhaController,
                 decoration: InputDecoration(labelText: 'Senha'),
                 obscureText: true,
@@ -118,9 +141,9 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 value: _tipoUsuario,
                 items: [
                   DropdownMenuItem(value: 'cliente', child: Text('Cliente')),
-                  //                 DropdownMenuItem(
-                  //                   value: 'administrador',
-                  //                   child: Text('Administrador')),
+                  // DropdownMenuItem(
+                  //   value: 'administrador',
+                  //   child: Text('Administrador')),
                 ],
                 onChanged: (value) {
                   setState(() {
