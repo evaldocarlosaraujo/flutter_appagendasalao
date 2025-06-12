@@ -12,10 +12,31 @@ class _ListarBrindesScreenState extends State<ListarBrindesScreen> {
   );
 
   void excluirBrinde(String id) async {
-    await brindesRef.doc(id).delete();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Brinde excluído com sucesso.')));
+    final confirmacao = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Confirmar exclusão'),
+            content: Text('Deseja realmente excluir este brinde?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Não'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text('Sim'),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmacao == true) {
+      await brindesRef.doc(id).delete();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Brinde excluído com sucesso.')));
+    }
   }
 
   void editarBrinde(String id, String nomeAtual, String descricaoAtual) {
