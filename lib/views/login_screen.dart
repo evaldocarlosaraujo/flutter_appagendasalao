@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLogin = true;
   bool _isLoading = false;
 
-  // 🔐 Função para salvar o token do FCM no Firestore
+  // 🔐 Salvar token do FCM
   Future<void> salvarTokenDoUsuario(String uid) async {
     try {
       final token = await FirebaseMessaging.instance.getToken();
@@ -46,11 +46,8 @@ class _LoginScreenState extends State<LoginScreen> {
             );
 
         final uid = userCredential.user!.uid;
-
-        // Salva o token FCM após o login
         await salvarTokenDoUsuario(uid);
 
-        // Verifica tipo do usuário no Firestore
         final doc =
             await FirebaseFirestore.instance
                 .collection('usuarios')
@@ -78,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        // Redireciona para tela de cadastro completa
+        // CADASTRO
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => CadastroScreen()),
@@ -103,11 +100,15 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Logo
+              Image.asset('assets/img/logo.jpg', height: 360),
+              SizedBox(height: 24),
               Text(
                 _isLogin ? 'Entrar' : 'Cadastrar',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 24),
+
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -117,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               SizedBox(height: 16),
+
               TextField(
                 controller: _senhaController,
                 obscureText: true,
@@ -126,6 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               SizedBox(height: 24),
+
               _isLoading
                   ? CircularProgressIndicator()
                   : ElevatedButton(
@@ -138,6 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
               SizedBox(height: 12),
+
               TextButton(
                 onPressed: () {
                   setState(() {
