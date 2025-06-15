@@ -108,7 +108,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
     return query.snapshots();
   }
 
-  Future<String> _buscarNomeCliente(String clienteId) async {
+  Future<Map<String, String>> _buscarDadosCliente(String clienteId) async {
     final usuarioSnapshot =
         await FirebaseFirestore.instance
             .collection('usuarios')
@@ -116,9 +116,13 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
             .get();
 
     if (usuarioSnapshot.exists) {
-      return usuarioSnapshot.data()?['nome'] ?? 'Cliente';
+      final data = usuarioSnapshot.data()!;
+      return {
+        'nome': data['nome'] ?? 'Cliente',
+        'telefone': data['telefone'] ?? 'Não informado',
+      };
     } else {
-      return 'Cliente';
+      return {'nome': 'Cliente', 'telefone': 'Não encontrado'};
     }
   }
 
@@ -218,10 +222,13 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                     final status = doc['status'] ?? 'pendente';
                     final clienteId = doc['clienteId'];
 
-                    return FutureBuilder<String>(
-                      future: _buscarNomeCliente(clienteId),
-                      builder: (context, snapshotNome) {
-                        final nomeCliente = snapshotNome.data ?? 'Cliente';
+                    return FutureBuilder<Map<String, String>>(
+                      future: _buscarDadosCliente(clienteId),
+                      builder: (context, snapshotCliente) {
+                        final nomeCliente =
+                            snapshotCliente.data?['nome'] ?? 'Cliente';
+                        final telefoneCliente =
+                            snapshotCliente.data?['telefone'] ?? '...';
 
                         return Card(
                           margin: EdgeInsets.symmetric(
@@ -233,7 +240,8 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                               '${doc['servicoNome']} com: ${doc['profissionalNome']}',
                             ),
                             subtitle: Text(
-                              '${dataHora != null ? '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}' : 'Data inválida'}\nCliente: $nomeCliente',
+                              '${dataHora != null ? '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}' : 'Data inválida'}\n'
+                              'Cliente: $nomeCliente\nTelefone: $telefoneCliente',
                             ),
                             isThreeLine: true,
                             trailing: Wrap(
