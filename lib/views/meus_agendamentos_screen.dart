@@ -2,19 +2,22 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-/// Tela que mostra os agendamentos do usuário logado,
-/// permitindo cancelar agendamentos pendentes.
-class MeusAgendamentosScreen extends StatelessWidget {
-  // Pega o ID do usuário atual logado via FirebaseAuth
+class MeusAgendamentosScreen extends StatefulWidget {
+  @override
+  _MeusAgendamentosScreenState createState() => _MeusAgendamentosScreenState();
+}
+
+class _MeusAgendamentosScreenState extends State<MeusAgendamentosScreen> {
   final String userId = FirebaseAuth.instance.currentUser!.uid;
 
-  /// Função que exibe uma confirmação antes de cancelar o agendamento.
-  /// Se confirmado, deleta o agendamento no Firestore.
+  DateTime? selectedDate;
+  String selectedStatus = 'Todos';
+
+  /// Cancelar agendamento com confirmação
   void cancelarAgendamentoComConfirmacao(
     String agendamentoId,
     BuildContext context,
   ) async {
-    // Exibe diálogo para confirmar ação do usuário
     final confirmacao = await showDialog<bool>(
       context: context,
       builder:
@@ -23,34 +26,28 @@ class MeusAgendamentosScreen extends StatelessWidget {
             content: Text('Deseja realmente cancelar este agendamento?'),
             actions: [
               TextButton(
-                onPressed:
-                    () => Navigator.pop(context, false), // Usuário cancelou
+                onPressed: () => Navigator.pop(context, false),
                 child: Text('Não'),
               ),
               ElevatedButton(
-                onPressed:
-                    () => Navigator.pop(context, true), // Usuário confirmou
+                onPressed: () => Navigator.pop(context, true),
                 child: Text('Sim'),
               ),
             ],
           ),
     );
 
-    // Se usuário confirmou, prossegue para deletar
     if (confirmacao == true) {
       await FirebaseFirestore.instance
           .collection('agendamentos')
           .doc(agendamentoId)
           .delete();
-
-      // Mostra mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Agendamento cancelado com sucesso')),
       );
     }
   }
 
-  /// Exibe mensagem informando que agendamento confirmado não pode ser cancelado.
   void mostrarMensagemConfirmado(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -60,86 +57,169 @@ class MeusAgendamentosScreen extends StatelessWidget {
     );
   }
 
+  /// Filtro de status
+  List<String> statusOptions = ['Todos', 'pendente', 'confirmado'];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Meus Agendamentos')),
-      body: StreamBuilder<QuerySnapshot>(
-        // Escuta em tempo real os agendamentos do usuário atual
-        stream:
-            FirebaseFirestore.instance
-                .collection('agendamentos')
-                .where('clienteId', isEqualTo: userId)
-                //.orderBy('dataHora') // Pode ordenar futuramente por data e hora
-                .snapshots(),
-        builder: (context, snapshot) {
-          // Enquanto não tem dados, mostra indicador de carregamento
-          if (!snapshot.hasData)
-            return Center(child: CircularProgressIndicator());
-
-          final agendamentos = snapshot.data!.docs;
-
-          // Caso não haja agendamentos, informa ao usuário
-          if (agendamentos.isEmpty) {
-            return Center(child: Text('Nenhum agendamento encontrado.'));
-          }
-
-          // Lista os agendamentos em uma ListView
-          return ListView.builder(
-            itemCount: agendamentos.length,
-            itemBuilder: (context, index) {
-              final doc = agendamentos[index];
-              final data = doc.data() as Map<String, dynamic>;
-
-              // Converte string para DateTime para exibir data/hora formatados
-              final dataHora = DateTime.parse(data['dataHora']);
-              // Status pode ser: pendente, confirmado, etc.
-              final status = data['status']?.toLowerCase() ?? 'pendente';
-              // Verifica se está confirmado para bloquear cancelamento
-              final confirmado = status == 'confirmado';
-
-              return Card(
-                margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: ListTile(
-                  title: Text(
-                    '${data['servicoNome']} com: ${data['profissionalNome']}',
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Mostra data e hora formatadas
-                      Text(
-                        '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}',
-                      ),
-                      SizedBox(height: 4),
-                      // Exibe status com cor diferente se confirmado ou pendente
-                      Text(
-                        'Status: ${status[0].toUpperCase()}${status.substring(1)}',
-                        style: TextStyle(
-                          color: confirmado ? Colors.green : Colors.orange,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Botão para cancelar agendamento (se permitido)
-                  trailing: IconButton(
-                    icon: Icon(Icons.cancel, color: Colors.orange),
-                    onPressed: () {
-                      if (confirmado) {
-                        // Se confirmado, mostra aviso que não pode cancelar
-                        mostrarMensagemConfirmado(context);
-                      } else {
-                        // Senão, mostra diálogo de confirmação e cancela
-                        cancelarAgendamentoComConfirmacao(doc.id, context);
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                // Filtro por data
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate ?? DateTime.now(),
+                        firstDate: DateTime(2023),
+                        lastDate: DateTime(2100),
+                      );
+                      if (pickedDate != null) {
+                        setState(() => selectedDate = pickedDate);
                       }
                     },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        vertical: 12,
+                        horizontal: 16,
+                      ),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        selectedDate != null
+                            ? 'Data: ${selectedDate!.day}/${selectedDate!.month}/${selectedDate!.year}'
+                            : 'Selecionar Data',
+                      ),
+                    ),
                   ),
                 ),
-              );
-            },
-          );
-        },
+                SizedBox(width: 12),
+                // Filtro por status
+                DropdownButton<String>(
+                  value: selectedStatus,
+                  onChanged: (value) => setState(() => selectedStatus = value!),
+                  items:
+                      statusOptions.map((status) {
+                        return DropdownMenuItem(
+                          value: status,
+                          child: Text(
+                            status[0].toUpperCase() + status.substring(1),
+                          ),
+                        );
+                      }).toList(),
+                ),
+                IconButton(
+                  icon: Icon(Icons.clear),
+                  tooltip: 'Limpar Filtros',
+                  onPressed:
+                      () => setState(() {
+                        selectedDate = null;
+                        selectedStatus = 'Todos';
+                      }),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('agendamentos')
+                      .where('clienteId', isEqualTo: userId)
+                      .snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData)
+                  return Center(child: CircularProgressIndicator());
+
+                final docs = snapshot.data!.docs;
+                final agendamentosFiltrados =
+                    docs.where((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final dataHora = DateTime.parse(data['dataHora']);
+                      final status =
+                          data['status']?.toLowerCase() ?? 'pendente';
+
+                      final mesmoDia =
+                          selectedDate == null ||
+                          (dataHora.year == selectedDate!.year &&
+                              dataHora.month == selectedDate!.month &&
+                              dataHora.day == selectedDate!.day);
+
+                      final mesmoStatus =
+                          selectedStatus == 'Todos' || status == selectedStatus;
+
+                      return mesmoDia && mesmoStatus;
+                    }).toList();
+
+                if (agendamentosFiltrados.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'Nenhum agendamento encontrado com os filtros aplicados.',
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: agendamentosFiltrados.length,
+                  itemBuilder: (context, index) {
+                    final doc = agendamentosFiltrados[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final dataHora = DateTime.parse(data['dataHora']);
+                    final status = data['status']?.toLowerCase() ?? 'pendente';
+                    final confirmado = status == 'confirmado';
+
+                    return Card(
+                      margin: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: ListTile(
+                        title: Text(
+                          '${data['servicoNome']} com: ${data['profissionalNome']}',
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${dataHora.day}/${dataHora.month} às ${dataHora.hour}:${dataHora.minute.toString().padLeft(2, '0')}',
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Status: ${status[0].toUpperCase()}${status.substring(1)}',
+                              style: TextStyle(
+                                color:
+                                    confirmado ? Colors.green : Colors.orange,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.cancel, color: Colors.orange),
+                          onPressed: () {
+                            if (confirmado) {
+                              mostrarMensagemConfirmado(context);
+                            } else {
+                              cancelarAgendamentoComConfirmacao(
+                                doc.id,
+                                context,
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
