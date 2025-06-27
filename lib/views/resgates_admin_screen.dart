@@ -1,14 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+/// Tela utilizada pelo ADMINISTRADOR para gerenciar as solicitações de resgate de brindes:
+/// - Visualiza todos os resgates solicitados
+/// - Pode aprovar, rejeitar ou marcar como utilizado
 class ResgatesAdminScreen extends StatelessWidget {
+  // Referência à coleção de resgates no Firestore
   final CollectionReference resgatesRef = FirebaseFirestore.instance.collection(
     'resgates',
   );
+
+  // Referência à coleção de brindes
   final CollectionReference brindesRef = FirebaseFirestore.instance.collection(
     'brindes',
   );
 
+  /// Atualiza o status do resgate (pendente, aprovado, rejeitado)
   void atualizarStatus(
     String resgateId,
     String novoStatus,
@@ -21,6 +28,7 @@ class ResgatesAdminScreen extends StatelessWidget {
     ).showSnackBar(SnackBar(content: Text('Resgate $novoStatus com sucesso.')));
   }
 
+  /// Marca o resgate como utilizado (após o cliente receber o brinde)
   void marcarComoUtilizado(String resgateId, BuildContext context) async {
     await resgatesRef.doc(resgateId).update({'utilizado': true});
     ScaffoldMessenger.of(
@@ -28,6 +36,7 @@ class ResgatesAdminScreen extends StatelessWidget {
     ).showSnackBar(SnackBar(content: Text('Brinde marcado como utilizado.')));
   }
 
+  /// Busca o nome do brinde com base no ID salvo no documento de resgate
   Future<String> _buscarNomeBrinde(String brindeId) async {
     if (brindeId.isEmpty) return 'Brinde não informado';
     final doc = await brindesRef.doc(brindeId).get();
@@ -38,6 +47,8 @@ class ResgatesAdminScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Resgates de Brindes')),
+
+      // StreamBuilder para escutar os resgates em tempo real
       body: StreamBuilder<QuerySnapshot>(
         stream: resgatesRef.orderBy('data', descending: true).snapshots(),
         builder: (context, snapshot) {
@@ -58,9 +69,9 @@ class ResgatesAdminScreen extends StatelessWidget {
               final utilizado =
                   resgate.data().toString().contains('utilizado') &&
                   resgate['utilizado'] == true;
+
               final Timestamp? timestamp = resgate['data'];
               final DateTime? data = timestamp?.toDate();
-
               final dataFormatada =
                   data != null
                       ? '${data.day}/${data.month}/${data.year} ${data.hour}:${data.minute.toString().padLeft(2, '0')}'
@@ -71,6 +82,7 @@ class ResgatesAdminScreen extends StatelessWidget {
                       ? resgate['brindeId']
                       : '';
 
+              // FutureBuilder interno para buscar o nome do brinde por ID
               return FutureBuilder<String>(
                 future: _buscarNomeBrinde(brindeId),
                 builder: (context, brindeSnapshot) {
@@ -83,14 +95,18 @@ class ResgatesAdminScreen extends StatelessWidget {
                     child: ListTile(
                       title: Text(brindeSnapshot.data!),
                       subtitle: Text(
-                        'Solicitado em: $dataFormatada\nStatus: $status${utilizado ? '\n✅ Já utilizado' : ''}',
+                        'Solicitado em: $dataFormatada\n'
+                        'Status: $status${utilizado ? '\n✅ Já utilizado' : ''}',
                       ),
                       isThreeLine: true,
+
+                      // Ações disponíveis dependendo do status
                       trailing:
                           status == 'pendente'
                               ? Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  // Botão Aprovar
                                   IconButton(
                                     icon: Icon(
                                       Icons.check,
@@ -104,6 +120,7 @@ class ResgatesAdminScreen extends StatelessWidget {
                                           context,
                                         ),
                                   ),
+                                  // Botão Rejeitar
                                   IconButton(
                                     icon: Icon(Icons.close, color: Colors.red),
                                     tooltip: 'Rejeitar',
@@ -122,6 +139,7 @@ class ResgatesAdminScreen extends StatelessWidget {
                                 children: [
                                   Icon(Icons.verified, color: Colors.green),
                                   SizedBox(width: 8),
+                                  // Botão "Marcar como utilizado" (aparece apenas se ainda não foi utilizado)
                                   if (!utilizado)
                                     TextButton.icon(
                                       icon: Icon(Icons.check_circle_outline),
@@ -134,7 +152,10 @@ class ResgatesAdminScreen extends StatelessWidget {
                                     ),
                                 ],
                               )
-                              : Icon(Icons.block, color: Colors.red),
+                              : Icon(
+                                Icons.block,
+                                color: Colors.red,
+                              ), // Ícone de rejeitado
                     ),
                   );
                 },

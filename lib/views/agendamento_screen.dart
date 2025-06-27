@@ -3,18 +3,23 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
+/// Classe para definir os possíveis status de um agendamento.
+/// Utilizo constantes para evitar erros de digitação e facilitar manutenção.
 class StatusAgendamento {
   static const String pendente = 'pendente';
   static const String confirmado = 'confirmado';
   static const String cancelado = 'cancelado';
 }
 
+/// Tela onde o cliente realiza o agendamento.
+/// Permite escolher o serviço, profissional, data e horário.
 class AgendamentoScreen extends StatefulWidget {
   @override
   State<AgendamentoScreen> createState() => _AgendamentoScreenState();
 }
 
 class _AgendamentoScreenState extends State<AgendamentoScreen> {
+  // IDs e nomes selecionados nos campos
   String? servicoSelecionadoId;
   String? profissionalSelecionadoId;
   String? profissionalNome;
@@ -22,7 +27,9 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
   DateTime? dataSelecionada;
   TimeOfDay? horarioSelecionado;
 
+  /// Função responsável por validar os campos e salvar o agendamento no Firestore.
   void salvarAgendamento() async {
+    // Verificação básica se todos os campos foram preenchidos
     if (servicoSelecionadoId == null ||
         profissionalSelecionadoId == null ||
         dataSelecionada == null ||
@@ -33,6 +40,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
       return;
     }
 
+    // Combina data e hora em um único DateTime
     DateTime dataHora = DateTime(
       dataSelecionada!.year,
       dataSelecionada!.month,
@@ -41,7 +49,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
       horarioSelecionado!.minute,
     );
 
-    // ❌ Validação: não permitir horários passados
+    // Validação para impedir agendamentos no passado
     if (dataHora.isBefore(DateTime.now())) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -54,7 +62,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
       return;
     }
 
-    // ❌ Verifica se já existe agendamento para o mesmo profissional, dia e hora
+    // Verifica se já existe um agendamento para o mesmo profissional e horário
     final existe =
         await FirebaseFirestore.instance
             .collection('agendamentos')
@@ -74,9 +82,12 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
       return;
     }
 
+    // Gera um ID único para o novo agendamento
     final id = Uuid().v4();
+    // Pega o ID do usuário logado (cliente)
     final usuarioId = FirebaseAuth.instance.currentUser!.uid;
 
+    // Salva o agendamento no Firestore
     await FirebaseFirestore.instance.collection('agendamentos').doc(id).set({
       'id': id,
       'clienteId': usuarioId,
@@ -88,13 +99,16 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
       'status': StatusAgendamento.pendente,
     });
 
+    // Feedback de sucesso
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Agendamento realizado com sucesso!")),
     );
 
+    // Volta para a tela anterior
     Navigator.pop(context);
   }
 
+  /// Interface da tela de agendamento
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,6 +117,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
+            // Dropdown de seleção de serviço
             Text('Serviço:', style: TextStyle(fontWeight: FontWeight.bold)),
             StreamBuilder<QuerySnapshot>(
               stream:
@@ -134,6 +149,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
             ),
             SizedBox(height: 20),
 
+            // Dropdown de seleção de profissional
             Text(
               'Profissional:',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -170,6 +186,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
             ),
             SizedBox(height: 20),
 
+            // Botão de escolha da data
             Text('Data:', style: TextStyle(fontWeight: FontWeight.bold)),
             ElevatedButton(
               onPressed: () async {
@@ -189,6 +206,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
             ),
             SizedBox(height: 20),
 
+            // Botão de escolha do horário
             Text('Horário:', style: TextStyle(fontWeight: FontWeight.bold)),
             ElevatedButton(
               onPressed: () async {
@@ -206,6 +224,7 @@ class _AgendamentoScreenState extends State<AgendamentoScreen> {
             ),
             SizedBox(height: 30),
 
+            // Botão para confirmar agendamento
             ElevatedButton(
               onPressed: salvarAgendamento,
               child: Text('Confirmar Agendamento'),

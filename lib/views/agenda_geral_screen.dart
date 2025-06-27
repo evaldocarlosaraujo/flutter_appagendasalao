@@ -1,15 +1,24 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+/// Tela da Agenda Geral, acessada pelo administrador para visualizar,
+/// confirmar ou cancelar agendamentos. Possui filtros por profissional e data.
 class AgendaGeralScreen extends StatefulWidget {
   @override
   State<AgendaGeralScreen> createState() => _AgendaGeralScreenState();
 }
 
 class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
+  // ID do profissional selecionado no filtro
   String? profissionalSelecionadoId;
+
+  // Data selecionada no filtro
   DateTime? dataSelecionada;
 
+  /// Função responsável por cancelar um agendamento.
+  /// Exibe um diálogo de confirmação e, se confirmado,
+  /// remove o agendamento do Firestore.
+  /// Se o agendamento estiver confirmado, remove 1 ponto do cliente.
   void cancelarAgendamento(String agendamentoId, BuildContext context) async {
     final confirmacao = await showDialog<bool>(
       context: context,
@@ -30,6 +39,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
           ),
     );
 
+    // Cancela apenas se o usuário confirmar
     if (confirmacao != true) return;
 
     final agendamentoRef = FirebaseFirestore.instance
@@ -43,6 +53,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
       final status = agendamentoData['status'];
       final clienteId = agendamentoData['clienteId'];
 
+      // Se estava confirmado, remover ponto do cliente
       if (status == 'confirmado' && clienteId != null) {
         final usuarioRef = FirebaseFirestore.instance
             .collection('usuarios')
@@ -50,6 +61,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
         await usuarioRef.update({'pontos': FieldValue.increment(-1)});
       }
 
+      // Remove o agendamento do banco
       await agendamentoRef.delete();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -62,6 +74,8 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
     }
   }
 
+  /// Confirma um agendamento, atualizando o status no banco
+  /// e adicionando 1 ponto ao cliente.
   void confirmarAgendamento(
     String agendamentoId,
     String clienteId,
@@ -70,6 +84,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
     final agendamentoRef = FirebaseFirestore.instance
         .collection('agendamentos')
         .doc(agendamentoId);
+
     final usuarioRef = FirebaseFirestore.instance
         .collection('usuarios')
         .doc(clienteId);
@@ -82,6 +97,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
     );
   }
 
+  /// Recupera os agendamentos em tempo real aplicando os filtros de profissional e data.
   Stream<QuerySnapshot> _agendamentosFiltrados() {
     final ref = FirebaseFirestore.instance.collection('agendamentos');
     Query query = ref;
@@ -100,6 +116,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
         dataSelecionada!.day,
       );
       final fim = inicio.add(Duration(days: 1));
+
       query = query
           .where('dataHora', isGreaterThanOrEqualTo: inicio.toIso8601String())
           .where('dataHora', isLessThan: fim.toIso8601String());
@@ -108,6 +125,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
     return query.snapshots();
   }
 
+  /// Busca os dados do cliente (nome e telefone) com base no ID fornecido.
   Future<Map<String, String>> _buscarDadosCliente(String clienteId) async {
     final usuarioSnapshot =
         await FirebaseFirestore.instance
@@ -126,16 +144,19 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
     }
   }
 
+  /// Monta a interface da tela principal da Agenda Geral.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Agenda Geral')),
       body: Column(
         children: [
+          // Área de filtros
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
+                // Filtro por profissional usando Dropdown
                 StreamBuilder<QuerySnapshot>(
                   stream:
                       FirebaseFirestore.instance
@@ -163,6 +184,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                   },
                 ),
                 SizedBox(height: 10),
+                // Filtro por data
                 Row(
                   children: [
                     Expanded(
@@ -187,6 +209,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                         ),
                       ),
                     ),
+                    // Botão de limpar filtros
                     IconButton(
                       icon: Icon(Icons.clear),
                       onPressed: () {
@@ -201,6 +224,8 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
               ],
             ),
           ),
+
+          // Lista de agendamentos
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _agendamentosFiltrados(),
@@ -247,6 +272,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                             trailing: Wrap(
                               spacing: 8,
                               children: [
+                                // Botão para confirmar agendamento (se estiver pendente)
                                 if (status == 'pendente')
                                   IconButton(
                                     icon: Icon(
@@ -261,6 +287,7 @@ class _AgendaGeralScreenState extends State<AgendaGeralScreen> {
                                           context,
                                         ),
                                   ),
+                                // Botão para cancelar agendamento
                                 IconButton(
                                   icon: Icon(Icons.cancel, color: Colors.red),
                                   tooltip: 'Cancelar Agendamento',

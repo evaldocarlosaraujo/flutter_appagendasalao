@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Tela que mostra o programa de fidelidade do usuário:
+/// - Quantos pontos ele tem
+/// - Brindes disponíveis
+/// - Permite selecionar e solicitar resgate de brinde
+/// - Mostra brinde aprovado (se houver)
 class ProgramaFidelidadeScreen extends StatefulWidget {
   @override
   _ProgramaFidelidadeScreenState createState() =>
@@ -9,29 +14,32 @@ class ProgramaFidelidadeScreen extends StatefulWidget {
 }
 
 class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
-  int pontos = 0;
-  bool podeResgatar = false;
-  String? brindeSelecionadoId;
-  List<Map<String, dynamic>> brindesDisponiveis = [];
-  String? brindeAprovado;
-  bool brindeUtilizado = false;
+  int pontos = 0; // Pontuação atual do cliente
+  bool podeResgatar = false; // Se já possui pontos suficientes
+  String? brindeSelecionadoId; // ID do brinde escolhido pelo usuário
+  List<Map<String, dynamic>> brindesDisponiveis =
+      []; // Lista de brindes disponíveis
+  String? brindeAprovado; // Nome do brinde aprovado mais recente
+  bool brindeUtilizado = false; // Se o brinde aprovado já foi usado
 
   final user = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {
     super.initState();
-    carregarPontos();
-    carregarBrindesDisponiveis();
-    buscarBrindeAprovado();
+    carregarPontos(); // Busca a pontuação atual do cliente
+    carregarBrindesDisponiveis(); // Carrega os brindes do Firestore
+    buscarBrindeAprovado(); // Verifica se há algum brinde aprovado
   }
 
+  /// Busca no Firestore a pontuação do cliente e verifica se já pode resgatar
   Future<void> carregarPontos() async {
     final doc =
         await FirebaseFirestore.instance
             .collection('usuarios')
             .doc(user!.uid)
             .get();
+
     final data = doc.data();
     if (data != null) {
       setState(() {
@@ -41,9 +49,11 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
     }
   }
 
+  /// Busca os brindes disponíveis cadastrados no Firestore
   Future<void> carregarBrindesDisponiveis() async {
     final snapshot =
         await FirebaseFirestore.instance.collection('brindes').get();
+
     setState(() {
       brindesDisponiveis =
           snapshot.docs.map((doc) {
@@ -58,25 +68,18 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
     });
   }
 
+  /// Verifica se o cliente tem algum resgate aprovado e ainda não utilizado
   Future<void> buscarBrindeAprovado() async {
-    debugPrint('🔍 Buscando resgates aprovados...');
-
     final resgatesSnapshot =
         await FirebaseFirestore.instance
             .collection('resgates')
             .where('clienteId', isEqualTo: user!.uid)
             .where('status', isEqualTo: 'aprovado')
-            //.orderBy('data', descending: true) // Não usar pois causa erro se não houver índice
             .limit(1)
             .get();
 
-    debugPrint(
-      '📦 Total de resgates aprovados encontrados: ${resgatesSnapshot.docs.length}',
-    );
-
     if (resgatesSnapshot.docs.isNotEmpty) {
       final resgate = resgatesSnapshot.docs.first;
-      debugPrint('📄 Dados do resgate: ${resgate.data()}');
 
       final brindeId =
           resgate.data().containsKey('brindeId') ? resgate['brindeId'] : null;
@@ -86,17 +89,11 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
               : false;
 
       if (brindeId != null) {
-        debugPrint('🔑 brindeId encontrado: $brindeId');
-
         final brindeDoc =
             await FirebaseFirestore.instance
                 .collection('brindes')
                 .doc(brindeId)
                 .get();
-
-        debugPrint(
-          '📘 Documento do brinde: ${brindeDoc.exists ? brindeDoc.data() : 'não encontrado'}',
-        );
 
         setState(() {
           brindeAprovado =
@@ -106,19 +103,18 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
           brindeUtilizado = utilizado;
         });
       } else {
-        debugPrint('⚠️ brindeId não encontrado no resgate');
         setState(() {
           brindeAprovado = 'Brinde não especificado';
         });
       }
-    } else {
-      debugPrint('❌ Nenhum resgate aprovado encontrado');
     }
   }
 
+  /// Envia solicitação de resgate de brinde para o Firestore
   Future<void> resgatarBrinde() async {
     if (!podeResgatar || brindeSelecionadoId == null) return;
 
+    // Cria um novo documento na coleção "resgates"
     await FirebaseFirestore.instance.collection('resgates').add({
       'clienteId': user!.uid,
       'brindeId': brindeSelecionadoId,
@@ -127,11 +123,13 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
       'status': 'pendente',
     });
 
+    // Zera os pontos do cliente após o resgate
     await FirebaseFirestore.instance
         .collection('usuarios')
         .doc(user!.uid)
         .update({'pontos': 0});
 
+    // Exibe mensagem e atualiza a tela
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Brinde solicitado com sucesso! Aguarde aprovação.'),
@@ -153,8 +151,11 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
         padding: const EdgeInsets.all(16),
         child: ListView(
           children: [
+            // Exibe os pontos atuais do usuário
             Text('Seus pontos: $pontos', style: TextStyle(fontSize: 22)),
             SizedBox(height: 20),
+
+            // Dropdown com brindes disponíveis (caso existam)
             if (brindesDisponiveis.isNotEmpty)
               DropdownButtonFormField<String>(
                 value: brindeSelecionadoId,
@@ -177,12 +178,18 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
                       );
                     }).toList(),
               ),
+
             SizedBox(height: 20),
+
+            // Botão de resgate (apenas se puder resgatar)
             ElevatedButton(
               onPressed: podeResgatar ? resgatarBrinde : null,
               child: Text('Resgatar Brinde'),
             ),
+
             SizedBox(height: 40),
+
+            // Mensagem com o brinde aprovado (se houver)
             if (brindeAprovado != null)
               Text(
                 brindeUtilizado
@@ -194,7 +201,10 @@ class _ProgramaFidelidadeScreenState extends State<ProgramaFidelidadeScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
+
             SizedBox(height: 20),
+
+            // Dica sobre como acumular pontos
             Text(
               'A cada 10 agendamentos confirmados você ganha um brinde!',
               style: TextStyle(fontSize: 16),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+// Importações das telas acessadas pelo cliente
 import 'package:flutter_appagendasalao/views/historico_resgates_screen.dart';
 import 'package:flutter_appagendasalao/views/programa_fidelidade_screen.dart';
 import 'consulta_servicos_screen.dart';
@@ -7,9 +9,13 @@ import 'agendamento_screen.dart';
 import 'login_screen.dart';
 import 'meus_agendamentos_screen.dart';
 
+/// Tela principal exibida para o cliente após login
 class HomeCliente extends StatelessWidget {
+  /// Função responsável por fazer logout do usuário e retornar à tela de login
   void _logout(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
+
+    // Redireciona para a tela de login e remove todas as rotas anteriores
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => LoginScreen()),
@@ -17,6 +23,7 @@ class HomeCliente extends StatelessWidget {
     );
   }
 
+  /// Estilo padrão para os botões desta tela
   ButtonStyle _botaoEstilo() {
     return ElevatedButton.styleFrom(
       backgroundColor: Colors.amber[700],
@@ -29,6 +36,7 @@ class HomeCliente extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // AppBar com título e botão de sair
       appBar: AppBar(
         title: Text('Área do Cliente'),
         backgroundColor: Colors.amber[700],
@@ -40,11 +48,14 @@ class HomeCliente extends StatelessWidget {
           ),
         ],
       ),
+
+      // Corpo principal da tela com os botões de navegação
       body: Center(
         child: ListView(
           padding: const EdgeInsets.all(20),
           shrinkWrap: true,
           children: [
+            // Mensagem de boas-vindas
             Text(
               'Bem-vindo ao App AgendaSalão!',
               style: TextStyle(
@@ -56,6 +67,7 @@ class HomeCliente extends StatelessWidget {
             ),
             SizedBox(height: 20),
 
+            // Botão para consultar serviços disponíveis
             ElevatedButton.icon(
               icon: Icon(Icons.design_services),
               label: Text('Ver Serviços e Preços'),
@@ -69,6 +81,7 @@ class HomeCliente extends StatelessWidget {
             ),
             SizedBox(height: 10),
 
+            // Botão para realizar um novo agendamento
             ElevatedButton.icon(
               icon: Icon(Icons.calendar_month),
               label: Text('Agendar Horário'),
@@ -82,6 +95,7 @@ class HomeCliente extends StatelessWidget {
             ),
             SizedBox(height: 10),
 
+            // Botão para visualizar os agendamentos realizados
             ElevatedButton.icon(
               icon: Icon(Icons.event_note),
               label: Text('Meus Agendamentos'),
@@ -95,6 +109,7 @@ class HomeCliente extends StatelessWidget {
             ),
             SizedBox(height: 10),
 
+            // Botão para acessar o programa de fidelidade
             ElevatedButton(
               onPressed: () {
                 Navigator.push(
@@ -107,6 +122,7 @@ class HomeCliente extends StatelessWidget {
             ),
             SizedBox(height: 10),
 
+            // Botão para ver o histórico de resgates de brindes
             ElevatedButton(
               onPressed: () {
                 Navigator.push(

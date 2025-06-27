@@ -6,6 +6,7 @@ import 'home_cliente.dart';
 import 'home_admin.dart';
 import 'cadastro_screen.dart';
 
+/// Tela de login e cadastro do usuário
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
@@ -14,16 +15,23 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  // Controladores para capturar os dados digitados
   final _emailController = TextEditingController();
   final _senhaController = TextEditingController();
+
+  // Controla se a tela está no modo login (true) ou cadastro (false)
   bool _isLogin = true;
+
+  // Controla o estado de carregamento para mostrar indicador durante autenticação
   bool _isLoading = false;
 
-  // 🔐 Salvar token do FCM
+  /// Salva o token do Firebase Cloud Messaging (FCM) do usuário no Firestore
+  /// para possibilitar envio de notificações push
   Future<void> salvarTokenDoUsuario(String uid) async {
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
+        // Atualiza o documento do usuário com o token, usando merge para não sobrescrever outros dados
         await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
           'fcmToken': token,
         }, SetOptions(merge: true));
@@ -33,12 +41,13 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// Função que autentica o usuário (login ou cadastro)
   void _autenticarUsuario() async {
-    setState(() => _isLoading = true);
+    setState(() => _isLoading = true); // Inicia o indicador de carregamento
 
     try {
       if (_isLogin) {
-        // LOGIN
+        // LOGIN do usuário com email e senha
         UserCredential userCredential = await FirebaseAuth.instance
             .signInWithEmailAndPassword(
               email: _emailController.text.trim(),
@@ -46,8 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
             );
 
         final uid = userCredential.user!.uid;
+
+        // Salva o token do FCM para notificações
         await salvarTokenDoUsuario(uid);
 
+        // Consulta dados do usuário no Firestore para identificar tipo (cliente ou administrador)
         final doc =
             await FirebaseFirestore.instance
                 .collection('usuarios')
@@ -56,6 +68,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
         if (doc.exists) {
           final tipo = doc['tipo'];
+
+          // Redireciona para tela adequada conforme tipo do usuário
           if (tipo == 'administrador') {
             Navigator.pushReplacement(
               context,
@@ -68,6 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
             );
           }
         } else {
+          // Usuário não encontrado no banco Firestore
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Usuário não encontrado no banco de dados.'),
@@ -75,40 +90,44 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } else {
-        // CADASTRO
+        // Caso esteja no modo cadastro, direciona para tela de cadastro
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => CadastroScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
+      // Captura erros de autenticação (ex: senha errada, usuário não existe)
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Erro: ${e.message}')));
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isLoading = false); // Termina indicador de carregamento
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.yellow[50],
+      backgroundColor: Colors.yellow[50], // Fundo claro amarelo
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
+              // Logo do aplicativo
               Image.asset('assets/img/logo.jpg', height: 360),
               SizedBox(height: 24),
+
+              // Título dinâmico que muda conforme modo (Entrar ou Cadastrar)
               Text(
                 _isLogin ? 'Entrar' : 'Cadastrar',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 24),
 
+              // Campo para inserir email
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -119,6 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 16),
 
+              // Campo para inserir senha (texto oculto)
               TextField(
                 controller: _senhaController,
                 obscureText: true,
@@ -129,6 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 24),
 
+              // Botão para realizar ação de login ou cadastro
               _isLoading
                   ? CircularProgressIndicator()
                   : ElevatedButton(
@@ -137,15 +158,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.yellow[700],
                       foregroundColor: Colors.black,
-                      minimumSize: Size(double.infinity, 48),
+                      minimumSize: Size(
+                        double.infinity,
+                        48,
+                      ), // Botão grande horizontalmente
                     ),
                   ),
               SizedBox(height: 12),
 
+              // Texto para alternar entre login e cadastro
               TextButton(
                 onPressed: () {
                   setState(() {
-                    _isLogin = !_isLogin;
+                    _isLogin =
+                        !_isLogin; // Alterna o estado entre login e cadastro
                   });
                 },
                 child: Text(
